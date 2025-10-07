@@ -757,7 +757,7 @@ export default function App() {
                   {selectedDates.length > 0 ? `${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} selected` : 'No dates selected yet'}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={(e)=>{e.preventDefault(); setStep('dates');}}>Back</Button>
+                  <Button variant="outline" onClick={()=>{setStep('dates');}}>Back</Button>
                   <Button type="submit">Submit Request</Button>
                 </div>
               </div>
@@ -890,12 +890,12 @@ try {
     var yest = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
     var tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-    function pad(n) { return String(n).padStart(2, "0"); }
-    function isoLocal(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+    function pad(n: number) { return String(n).padStart(2, "0"); }
+    function isoLocal(d: Date) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
 
     console.assert(isoLocal(today).length === 10, "isoLocal should be 10 chars");
 
-    function isPast(d) { var d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return d0 < today0; }
+    function isPast(d: Date) { var d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return d0 < today0; }
     console.assert(isPast(yest) === true, "Yesterday should be considered past");
     console.assert(isPast(tomorrow) === false, "Tomorrow should not be past");
 
