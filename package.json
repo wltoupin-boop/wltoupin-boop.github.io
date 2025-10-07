@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "homepage": "https://wltoupin-boop.github.io",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
