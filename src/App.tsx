@@ -228,7 +228,7 @@ function MultiDateCalendar({
       </div>
 
       <div className="grid grid-cols-7 gap-px bg-neutral-200">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, idx) => (
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
           <div key={d} className="bg-white p-1 sm:p-2 text-[10px] sm:text-xs font-medium text-neutral-500 text-center">
             <span className="hidden sm:inline">{d}</span>
             <span className="inline sm:hidden">{d.charAt(0)}</span>
