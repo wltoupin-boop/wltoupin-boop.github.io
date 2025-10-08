@@ -20,7 +20,7 @@ import { Calendar as CalendarIcon, PawPrint, ChevronLeft, ChevronRight, CheckCir
 // =====================
 const Container = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen bg-neutral-50 text-neutral-900">
-    <div className="max-w-6xl mx-auto px-4 py-10">{children}</div>
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-10">{children}</div>
   </div>
 );
 
@@ -29,20 +29,22 @@ const Card = ({ children, className = "" }: { children: React.ReactNode; classNa
 );
 
 const CardHeader = ({ title, subtitle, icon, right }: { title: string; subtitle?: string; icon?: React.ReactNode; right?: React.ReactNode }) => (
-  <div className="p-6 border-b border-neutral-200 flex items-center gap-3 justify-between">
-    <div className="flex items-center gap-3">
-      {icon}
-      <div>
-        <h2 className="text-xl font-semibold leading-tight">{title}</h2>
-        {subtitle && <p className="text-sm text-neutral-500">{subtitle}</p>}
+  <div className="p-4 sm:p-6 border-b border-neutral-200">
+    <div className="flex items-start sm:items-center gap-2 sm:gap-3 justify-between flex-col sm:flex-row">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {icon}
+        <div>
+          <h2 className="text-lg sm:text-xl font-semibold leading-tight">{title}</h2>
+          {subtitle && <p className="text-xs sm:text-sm text-neutral-500">{subtitle}</p>}
+        </div>
       </div>
+      {right && <div className="text-xs sm:text-sm w-full sm:w-auto">{right}</div>}
     </div>
-    {right}
   </div>
 );
 
 const CardContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <div className={`p-6 ${className}`}>{children}</div>
+  <div className={`p-4 sm:p-6 ${className}`}>{children}</div>
 );
 
 const Button = ({
@@ -226,9 +228,10 @@ function MultiDateCalendar({
       </div>
 
       <div className="grid grid-cols-7 gap-px bg-neutral-200">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <div key={d} className="bg-white p-2 text-xs font-medium text-neutral-500 text-center">
-            {d}
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, idx) => (
+          <div key={d} className="bg-white p-1 sm:p-2 text-[10px] sm:text-xs font-medium text-neutral-500 text-center">
+            <span className="hidden sm:inline">{d}</span>
+            <span className="inline sm:hidden">{d.charAt(0)}</span>
           </div>
         ))}
         {monthMatrix.map((day, idx) => {
@@ -241,8 +244,9 @@ function MultiDateCalendar({
 
           const unavailable = blockedSet.has(key);
           const baseClasses = [
-            "relative aspect-square p-1 flex items-center justify-center text-sm select-none",
-            "bg-white hover:bg-neutral-50 focus:outline-none",
+            "relative aspect-square p-1 sm:p-2 flex items-center justify-center text-xs sm:text-sm select-none touch-manipulation",
+            "bg-white hover:bg-neutral-50 focus:outline-none active:scale-95 transition-transform",
+            "min-h-[44px]", // Ensure minimum tap target size for mobile
             outside && !(mode === 'employee') ? "text-neutral-400" : "",
             mode === "customer" && customerDisabled ? "text-neutral-300 cursor-not-allowed bg-neutral-100" : "",
             mode === "customer" && selected ? "!bg-emerald-600 text-white hover:!bg-emerald-700" : "",
@@ -282,39 +286,39 @@ function MultiDateCalendar({
               }
             >
               {/* Day number */}
-              <span>{format(day, "d")}</span>
+              <span className="font-medium">{format(day, "d")}</span>
               {/* Today marker */}
               {isTodayFlag && (
-                <span className="absolute top-1 right-1 text-[10px] font-semibold text-emerald-600">Today</span>
+                <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 text-[8px] sm:text-[10px] font-semibold text-emerald-600">
+                  <span className="hidden sm:inline">Today</span>
+                  <span className="inline sm:hidden">•</span>
+                </span>
               )}
             </button>
           );
         })}
       </div>
 
-      <div className="p-4 flex items-center gap-4 text-sm">
+      <div className="p-3 sm:p-4 flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm">
         {mode === "customer" ? (
           <>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded bg-emerald-600 inline-block" /> Selected
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-emerald-600 inline-block flex-shrink-0" /> <span>Selected</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded bg-neutral-100 border border-neutral-300 inline-block" /> Unavailable
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-neutral-100 border border-neutral-300 inline-block flex-shrink-0" /> <span>Unavailable</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded bg-white border border-neutral-300 inline-block" /> Available
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded border-2 border-emerald-600 inline-block" /> Today (not bookable)
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-white border border-neutral-300 inline-block flex-shrink-0" /> <span>Available</span>
             </div>
           </>
         ) : (
           <>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded bg-red-50 border border-red-300 inline-block" /> Unavailable (employee)
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-red-50 border border-red-300 inline-block flex-shrink-0" /> <span>Unavailable</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded bg-white border border-neutral-300 inline-block" /> Available
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-white border border-neutral-300 inline-block flex-shrink-0" /> <span>Available</span>
             </div>
           </>
         )}
@@ -342,31 +346,31 @@ function BookingSidebar({ date, onSave }: { date: Date; onSave: (c: Choice) => v
   const price = kind === "weekday" ? WEEKDAY_WINDOW.price : kind === "weekend" ? WEEKEND_WINDOW.price : undefined;
 
   return (
-    <div className="border border-neutral-200 rounded-2xl p-4">
-      <h3 className="font-semibold mb-3 flex items-center gap-2">
+    <div className="border border-neutral-200 rounded-2xl p-3 sm:p-4">
+      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base">
         <PawPrint className="w-4 h-4 text-emerald-600" /> Booking options
       </h3>
 
-      <div className="space-y-2 mb-4">
-        <label className="flex items-center gap-2">
-          <input type="radio" name="kind" checked={kind === "pet"} onChange={() => setKind("pet")} />
+      <div className="space-y-2.5 sm:space-y-2 mb-4">
+        <label className="flex items-start sm:items-center gap-2 text-xs sm:text-sm cursor-pointer">
+          <input type="radio" name="kind" checked={kind === "pet"} onChange={() => setKind("pet")} className="mt-1 sm:mt-0 flex-shrink-0" />
           <span>Pet Sitting (no bundle, arrival time arranged)</span>
         </label>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="kind" checked={kind === "weekday"} onChange={() => setKind("weekday")} disabled={isWeekend(date)} />
+        <label className="flex items-start sm:items-center gap-2 text-xs sm:text-sm cursor-pointer">
+          <input type="radio" name="kind" checked={kind === "weekday"} onChange={() => setKind("weekday")} disabled={isWeekend(date)} className="mt-1 sm:mt-0 flex-shrink-0" />
           <span>Weekday bundle ${WEEKDAY_WINDOW.price}.00 (Mon–Fri, 1 hr within 3:30–5:30)</span>
         </label>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="kind" checked={kind === "weekend"} onChange={() => setKind("weekend")} disabled={!isWeekend(date)} />
+        <label className="flex items-start sm:items-center gap-2 text-xs sm:text-sm cursor-pointer">
+          <input type="radio" name="kind" checked={kind === "weekend"} onChange={() => setKind("weekend")} disabled={!isWeekend(date)} className="mt-1 sm:mt-0 flex-shrink-0" />
           <span>Weekend bundle ${WEEKEND_WINDOW.price}.00 (Sat–Sun, 1 hr within 12:00–5:30)</span>
         </label>
       </div>
 
       {kind !== "pet" ? (
         <div className="mb-4">
-          <label className="block text-sm font-medium text-neutral-700 mb-1">Choose a 1‑hour time</label>
+          <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1">Choose a 1‑hour time</label>
           <select
-            className="w-full rounded-xl border border-neutral-300 px-3 py-2"
+            className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-sm"
             value={slotIndex}
             onChange={(e) => setSlotIndex(parseInt(e.target.value, 10))}
           >
@@ -378,11 +382,11 @@ function BookingSidebar({ date, onSave }: { date: Date; onSave: (c: Choice) => v
           </select>
         </div>
       ) : (
-        <p className="text-sm text-neutral-600 mb-4">No time needed — you’ll arrange arrival directly with the client.</p>
+        <p className="text-xs sm:text-sm text-neutral-600 mb-4">No time needed — you'll arrange arrival directly with the client.</p>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-neutral-600">{price ? `Price: $${price}.00` : "Price: TBD"}</div>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-0">
+        <div className="text-xs sm:text-sm text-neutral-600 text-center sm:text-left">{price ? `Price: $${price}.00` : "Price: TBD"}</div>
         <Button
           onClick={() => {
             if (kind === "pet") {
@@ -419,14 +423,14 @@ function EmployeePanel({
   const isUnavailable = activeISO ? unavailableSet.has(activeISO) : false;
 
   return (
-    <div className="border border-neutral-200 rounded-2xl p-4">
-      <h3 className="font-semibold mb-3 flex items-center gap-2"><Shield className="w-4 h-4 text-emerald-600" /> Employee tools</h3>
-      <div className="text-sm text-neutral-600 mb-3">{activeISO ? `Selected: ${format(new Date(activeISO), 'EEEE, MMM d, yyyy')}` : 'Click a date to view details.'}</div>
+    <div className="border border-neutral-200 rounded-2xl p-3 sm:p-4">
+      <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm sm:text-base"><Shield className="w-4 h-4 text-emerald-600" /> Employee tools</h3>
+      <div className="text-xs sm:text-sm text-neutral-600 mb-3">{activeISO ? `Selected: ${format(new Date(activeISO), 'EEEE, MMM d, yyyy')}` : 'Click a date to view details.'}</div>
 
       {activeISO && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-sm">Status: {isUnavailable ? <span className="text-red-600 font-medium">Unavailable</span> : <span className="text-emerald-700 font-medium">Available</span>}</div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-0">
+            <div className="text-xs sm:text-sm text-center sm:text-left">Status: {isUnavailable ? <span className="text-red-600 font-medium">Unavailable</span> : <span className="text-emerald-700 font-medium">Available</span>}</div>
             <Button
               variant={isUnavailable ? "outline" : "danger"}
               onClick={() => {
@@ -441,21 +445,21 @@ function EmployeePanel({
           </div>
 
           <div className="pt-2">
-            <h4 className="font-medium mb-2">Bookings on this date</h4>
+            <h4 className="font-medium mb-2 text-sm">Bookings on this date</h4>
             {dayBookings.length === 0 ? (
-              <p className="text-sm text-neutral-500">No bookings recorded for this date.</p>
+              <p className="text-xs sm:text-sm text-neutral-500">No bookings recorded for this date.</p>
             ) : (
               <ul className="space-y-2">
                 {dayBookings.map((b, i) => (
-                  <li key={i} className="border rounded-xl p-3">
-                    <div className="text-sm"><span className="font-medium">Client:</span> {b.customer.name} ({b.customer.email}{b.customer.phone ? ` • ${b.customer.phone}` : ""})</div>
-                    <div className="text-sm"><span className="font-medium">Pets:</span> {b.customer.pets || "—"}</div>
-                    <div className="text-sm"><span className="font-medium">Notes:</span> {b.customer.notes || "—"}</div>
-                    <div className="text-sm"><span className="font-medium">Type:</span> {b.choice.kind === 'pet' ? 'Pet Sitting (time arranged)' : b.choice.kind === 'weekday' ? `Weekday bundle ($${WEEKDAY_WINDOW.price}.00)` : `Weekend bundle ($${WEEKEND_WINDOW.price}.00)`}</div>
+                  <li key={i} className="border rounded-xl p-2.5 sm:p-3">
+                    <div className="text-xs sm:text-sm"><span className="font-medium">Client:</span> {b.customer.name} ({b.customer.email}{b.customer.phone ? ` • ${b.customer.phone}` : ""})</div>
+                    <div className="text-xs sm:text-sm"><span className="font-medium">Pets:</span> {b.customer.pets || "—"}</div>
+                    <div className="text-xs sm:text-sm"><span className="font-medium">Notes:</span> {b.customer.notes || "—"}</div>
+                    <div className="text-xs sm:text-sm"><span className="font-medium">Type:</span> {b.choice.kind === 'pet' ? 'Pet Sitting (time arranged)' : b.choice.kind === 'weekday' ? `Weekday bundle ($${WEEKDAY_WINDOW.price}.00)` : `Weekend bundle ($${WEEKEND_WINDOW.price}.00)`}</div>
                     {b.choice.kind !== 'pet' && (
-                      <div className="text-sm"><span className="font-medium">Time:</span> {minutesToLabel(b.choice.startMin!)} – {minutesToLabel(b.choice.endMin!)}</div>
+                      <div className="text-xs sm:text-sm"><span className="font-medium">Time:</span> {minutesToLabel(b.choice.startMin!)} – {minutesToLabel(b.choice.endMin!)}</div>
                     )}
-                    <div className="text-xs text-neutral-500 mt-1">Submitted: {new Date(b.createdAt).toLocaleString()}</div>
+                    <div className="text-[10px] sm:text-xs text-neutral-500 mt-1">Submitted: {new Date(b.createdAt).toLocaleString()}</div>
                   </li>
                 ))}
               </ul>
@@ -465,7 +469,7 @@ function EmployeePanel({
       )}
 
       {!activeISO && (
-        <p className="text-sm text-neutral-500">Use the calendar to select a date. You can mark it Unavailable or view any bookings.</p>
+        <p className="text-xs sm:text-sm text-neutral-500">Use the calendar to select a date. You can mark it Unavailable or view any bookings.</p>
       )}
     </div>
   );
@@ -619,40 +623,50 @@ export default function App() {
   return (
     <Container>
       {/* Header / Hero */}
-      <header className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white">
-            <PawPrint className="w-6 h-6" />
+      <header className="mb-4 sm:mb-8">
+        <div className="flex items-start sm:items-center justify-between gap-3 mb-3 sm:mb-0">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white flex-shrink-0">
+              <PawPrint className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold truncate">The Animal Society</h1>
+              <p className="text-xs sm:text-sm text-neutral-500 hidden xs:block">Friendly, reliable pet sitting in your neighborhood</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">The Animal Society</h1>
-            <p className="text-sm text-neutral-500">Friendly, reliable pet sitting in your neighborhood</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          {!employeeMode ? (
-            <Button variant="outline" onClick={openEmployeePrompt}>
-              <span className="inline-flex items-center gap-2"><Shield className="w-4 h-4" /> Employee mode</span>
-            </Button>
-          ) : (
-            <Button variant="danger" onClick={() => setEmployeeMode(false)}>Exit employee mode</Button>
-          )}
-          <a href="#book" className="hidden sm:inline-block">
-            <Button>Book Dates</Button>
-          </a>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!employeeMode ? (
+              <Button variant="outline" onClick={openEmployeePrompt}>
+                <span className="inline-flex items-center gap-1 sm:gap-2">
+                  <Shield className="w-4 h-4" /> 
+                  <span className="hidden sm:inline">Employee mode</span>
+                  <span className="inline sm:hidden text-xs">Staff</span>
+                </span>
+              </Button>
+            ) : (
+              <Button variant="danger" onClick={() => setEmployeeMode(false)}>
+                <span className="hidden sm:inline">Exit employee mode</span>
+                <span className="inline sm:hidden text-xs">Exit</span>
+              </Button>
+            )}
+            <a href="#book" className="hidden sm:inline-block">
+              <Button>Book Dates</Button>
+            </a>
+          </div>
         </div>
+        <p className="text-xs text-neutral-500 sm:hidden mt-2 px-1">Friendly, reliable pet sitting in your neighborhood</p>
       </header>
 
       {/* Employee auth modal */}
       {showEmployeePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowEmployeePrompt(false)}></div>
-          <div className="relative bg-white rounded-2xl shadow-xl border border-neutral-200 w-full max-w-sm p-5">
+          <div className="relative bg-white rounded-2xl shadow-xl border border-neutral-200 w-full max-w-sm p-4 sm:p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-semibold">Enter employee code</h3>
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                <h3 className="font-semibold text-sm sm:text-base">Enter employee code</h3>
               </div>
             </div>
             <div className="space-y-3">
@@ -664,9 +678,9 @@ export default function App() {
                 onChange={(e) => setEmployeeCodeInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') submitEmployeeCode(); }}
                 placeholder="Enter code"
-                className="w-full rounded-xl border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              {employeeAuthError && <div className="text-sm text-red-600">{employeeAuthError}</div>}
+              {employeeAuthError && <div className="text-xs sm:text-sm text-red-600">{employeeAuthError}</div>}
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setShowEmployeePrompt(false)}>Cancel</Button>
                 <Button onClick={submitEmployeeCode}>Enter</Button>
@@ -678,7 +692,7 @@ export default function App() {
 
       {/* CUSTOMER MODE */}
       {!employeeMode && (
-        <Card className="mb-8">
+        <Card className="mb-4 sm:mb-8">
           <CardHeader
             icon={<PawPrint className="w-6 h-6 text-emerald-600" />}
             title="Stress‑free care for your best friend"
@@ -696,14 +710,14 @@ export default function App() {
                   blockedDates={Array.from(unavailableSet)}
                   mode="customer"
                 />
-                <p className="mt-3 text-sm text-neutral-600">
+                <p className="mt-3 text-xs sm:text-sm text-neutral-600">
                   Past dates and today are unavailable. Select any future date on the calendar, configure the bundle on the right, then click "Submit Dates" below to continue.
                 </p>
               </div>
 
               {/* Dynamic booking sidebar (always visible; changes per date) */}
               <div>
-                <div className="mb-3 text-sm text-neutral-600">
+                <div className="mb-3 text-xs sm:text-sm text-neutral-600">
                   {activeDate ? `Configuring: ${format(activeDate, "EEEE, MMM d, yyyy")}` : "Select a date to configure booking options."}
                 </div>
                 {activeDate ? (
@@ -718,7 +732,7 @@ export default function App() {
                     }}
                   />
                 ) : (
-                  <div className="text-sm text-neutral-500 border border-dashed border-neutral-300 rounded-xl p-4">
+                  <div className="text-xs sm:text-sm text-neutral-500 border border-dashed border-neutral-300 rounded-xl p-3 sm:p-4">
                     Click a future date on the calendar to see bundle options here.
                   </div>
                 )}
@@ -726,8 +740,8 @@ export default function App() {
             </div>
 
             {/* Action bar: submit dates to proceed to details */}
-            <div className="mt-6 flex items-center justify-between">
-              <div className="text-sm text-neutral-600">
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
+              <div className="text-xs sm:text-sm text-neutral-600 text-center sm:text-left">
                 {selectedDates.length > 0 ? `${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} selected` : 'No dates selected yet'}
               </div>
               <div className="flex gap-2">
@@ -743,7 +757,7 @@ export default function App() {
 
       {/* DETAILS STEP (CUSTOMER) */}
       {!employeeMode && step === 'details' && !submitted && (
-        <Card className="mb-8">
+        <Card className="mb-4 sm:mb-8">
           <CardHeader title="Your details" subtitle="Enter your contact info so we can confirm your booking." right={<span className="text-xs text-neutral-500">Emails go to <span className="font-medium">wltoupin@gmail.com</span></span>} />
           <CardContent>
             <form onSubmit={onSubmit} className="space-y-4">
@@ -752,8 +766,8 @@ export default function App() {
               <Input id="phone" type="tel" label="Phone" placeholder="(555) 555‑5555" value={form.phone} onChange={(e: any) => setForm({ ...form, phone: e.target.value })} />
               <Input id="pets" label="Pet(s)" placeholder="e.g., Luna the dog (lab), Mochi the cat" value={form.pets} onChange={(e: any) => setForm({ ...form, pets: e.target.value })} />
               <Textarea id="notes" label="Notes" placeholder="Feeding schedule, meds, quirks, etc." value={form.notes} onChange={(e: any) => setForm({ ...form, notes: e.target.value })} />
-              <div className="flex items-center justify-between pt-2">
-                <div className="text-sm text-neutral-600">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 pt-2">
+                <div className="text-xs sm:text-sm text-neutral-600 text-center sm:text-left">
                   {selectedDates.length > 0 ? `${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} selected` : 'No dates selected yet'}
                 </div>
                 <div className="flex gap-2">
@@ -768,7 +782,7 @@ export default function App() {
 
       {/* CONFIRMATION */}
       {!employeeMode && submitted && (
-        <Card className="mb-8 border-emerald-200">
+        <Card className="mb-4 sm:mb-8 border-emerald-200">
           <CardHeader
             icon={<CheckCircle2 className="w-6 h-6 text-emerald-600" />}
             title="Request ready to send"
@@ -776,16 +790,16 @@ export default function App() {
             right={<span className="text-xs text-neutral-500">Sending to <span className="font-medium">wltoupin@gmail.com</span></span>}
           />
           <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <h3 className="font-semibold mb-2">Selected date(s)</h3>
-                <ul className="list-disc pl-5 space-y-1 text-sm">
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">Selected date(s)</h3>
+                <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm">
                   {selectedDates.map((d) => (
                     <li key={iso(d)}>{format(d, "EEEE, MMM d, yyyy")}</li>
                   ))}
                 </ul>
               </div>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1 text-xs sm:text-sm">
                 <div><span className="font-medium">Name:</span> {form.name}</div>
                 <div><span className="font-medium">Email:</span> {form.email}</div>
                 <div><span className="font-medium">Phone:</span> {form.phone || "—"}</div>
@@ -793,18 +807,18 @@ export default function App() {
                 <div><span className="font-medium">Notes:</span> {form.notes || "—"}</div>
               </div>
             </div>
-            <div className="mt-4 flex gap-2">
-              <a href={mailtoHref}><Button>Send Email</Button></a>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2">
+              <a href={mailtoHref} className="flex-1 sm:flex-initial"><Button>Send Email</Button></a>
               <Button variant="ghost" onClick={reset}>Start Over</Button>
             </div>
-            <p className="mt-3 text-xs text-neutral-500">Tip: For a full booking system, connect to a database (e.g., Supabase) and write bookings server‑side to prevent double‑booking.</p>
+            <p className="mt-3 text-[10px] sm:text-xs text-neutral-500">Tip: For a full booking system, connect to a database (e.g., Supabase) and write bookings server‑side to prevent double‑booking.</p>
           </CardContent>
         </Card>
       )}
 
       {/* EMPLOYEE MODE */}
       {employeeMode && (
-        <Card className="mb-8">
+        <Card className="mb-4 sm:mb-8">
           <CardHeader
             icon={<Shield className="w-6 h-6 text-emerald-600" />}
             title="Employee mode"
@@ -820,7 +834,7 @@ export default function App() {
                   blockedDates={Array.from(unavailableSet)}
                   mode="employee"
                 />
-                <p className="mt-3 text-sm text-neutral-600">Click a date to view details. Use the button to mark it Unavailable/Available. Unavailable dates are blocked for customers.</p>
+                <p className="mt-3 text-xs sm:text-sm text-neutral-600">Click a date to view details. Use the button to mark it Unavailable/Available. Unavailable dates are blocked for customers.</p>
               </div>
               <EmployeePanel
                 activeDate={activeDate}
@@ -833,33 +847,35 @@ export default function App() {
         </Card>
       )}
 
-      <footer className="text-xs text-neutral-500 text-center mt-10">
+      <footer className="text-xs text-neutral-500 text-center mt-6 sm:mt-10">
         <div className="mb-4">
-          <p className="text-sm text-neutral-600 mb-2">Scan to open this booking site:</p>
+          <p className="text-xs sm:text-sm text-neutral-600 mb-2">Scan to open this booking site:</p>
           <img
             src={qrImageSrc}
             alt="QR code to booking site"
-            className="inline-block w-40 h-40"
+            className="inline-block w-32 h-32 sm:w-40 sm:h-40"
           />
-          <div className="mt-2 flex flex-col items-center gap-1">
-            <a href={qrTarget} className="text-emerald-700 underline break-all">{qrTarget}</a>
+          <div className="mt-2 flex flex-col items-center gap-1 px-3">
+            <a href={qrTarget} className="text-emerald-700 underline break-all text-xs sm:text-sm">{qrTarget}</a>
             {employeeMode && (
-              <div className="mt-2 w-full max-w-xl px-4">
-                <div className="text-[11px] text-neutral-500 mb-1">Employee tools: set a custom share URL for the QR (use your deployed link, not localhost).</div>
-                <div className="flex gap-2">
+              <div className="mt-2 w-full max-w-xl">
+                <div className="text-[10px] sm:text-[11px] text-neutral-500 mb-1">Employee tools: set a custom share URL for the QR (use your deployed link, not localhost).</div>
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="url"
                     placeholder="https://your-live-domain.com"
                     value={customQrTarget}
                     onChange={(e)=> setCustomQrTarget(e.target.value)}
-                    className="flex-1 rounded-xl border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 rounded-xl border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                  <Button variant="outline" onClick={()=> setCustomQrTarget(qrTarget)}>Use this page</Button>
+                  <Button variant="outline" onClick={()=> setCustomQrTarget(qrTarget)}>
+                    <span className="text-xs sm:text-sm">Use this page</span>
+                  </Button>
                 </div>
-                <div className="flex gap-2 justify-center mt-2">
-                  <a href={qrImageSrc} download="AnimalSociety-QR.png"><Button variant="outline">Download QR</Button></a>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center mt-2">
+                  <a href={qrImageSrc} download="AnimalSociety-QR.png" className="flex-1 sm:flex-initial"><Button variant="outline">Download QR</Button></a>
                   <button
-                    className="px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm bg-white border border-neutral-300 hover:bg-neutral-50"
+                    className="px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm bg-white border border-neutral-300 hover:bg-neutral-50 flex-1 sm:flex-initial"
                     onClick={async()=>{
                       try {
                         await navigator.clipboard.writeText(qrTarget);
@@ -874,7 +890,7 @@ export default function App() {
             )}
           </div>
         </div>
-        © {new Date().getFullYear()} The Animal Society. All rights reserved.
+        <p className="text-[10px] sm:text-xs">© {new Date().getFullYear()} The Animal Society. All rights reserved.</p>
       </footer>
     </Container>
   );
