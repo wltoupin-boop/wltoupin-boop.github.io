@@ -66,3 +66,4 @@ This project is automatically deployed to GitHub Pages using GitHub Actions. The
 ## License
 
 © 2024 The Animal Society. All rights reserved.
+# Trigger GitHub Actions
