@@ -1,11 +1,20 @@
-// Script to deploy with environment variables
-// Usage: node deploy-with-env.js
+// ⚠️ DEPRECATED: This script is no longer needed
+// GitHub Actions now handles automated deployment with environment variables
+// See .github/workflows/deploy.yml for the new deployment pipeline
+//
+// To deploy: Simply push to master branch and GitHub Actions will automatically build and deploy
+// To configure: Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY as GitHub Secrets
+//
+// If you still want to deploy manually, use:
+// 1. Create a .env file with your credentials
+// 2. Run: npm run build
+// 3. Run: npm run deploy
 
 import { execSync } from 'child_process';
 
-// Your Supabase credentials (replace with your actual values)
-const SUPABASE_URL = 'https://nusnquvsugwnahlurgyo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51c25xdXZzdWd3bmFobHVyZ3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5NjA5MzAsImV4cCI6MjA3NTUzNjkzMH0.NT0-RfZx1yyFbEJTCnwPjeCfIOn6M-Yf0d4ANT2oZkQ';
+// Credentials are now managed via GitHub Secrets - no need to hardcode here
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
 
 console.log('🚀 Building with environment variables...');
 
