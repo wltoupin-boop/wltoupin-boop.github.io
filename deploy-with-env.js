@@ -1,7 +1,7 @@
 // Script to deploy with environment variables
 // Usage: node deploy-with-env.js
 
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 // Your Supabase credentials (replace with your actual values)
 const SUPABASE_URL = 'https://nusnquvsugwnahlurgyo.supabase.co';
