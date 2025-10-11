@@ -1,0 +1,11 @@
+# Copy this to a new file named .env in the project root
+# Then replace the values with your actual Supabase credentials
+
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Get these values from:
+# https://app.supabase.com/project/_/settings/api
+
+
+

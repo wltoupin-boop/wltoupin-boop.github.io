@@ -14,6 +14,7 @@ import {
   startOfDay,
 } from "date-fns";
 import { Calendar as CalendarIcon, PawPrint, ChevronLeft, ChevronRight, CheckCircle2, Shield } from "lucide-react";
+import { supabase } from "./supabaseClient";
 
 // =====================
 // UI PRIMITIVES
@@ -140,8 +141,6 @@ const EMPLOYEE_CODE = "1123";
 export const validateEmployeeCode = (code: string) => code === EMPLOYEE_CODE;
 
 // LocalStorage keys
-const LS_UNAVAILABLE = "as_unavailable_v1";
-const LS_BOOKINGS = "as_bookings_v1";
 const LS_QR_TARGET = "as_qr_target_v1";
 
 // QR Builder (pure function so we can test it)
@@ -156,6 +155,11 @@ type Booking = {
   choice: Choice;
   customer: { name: string; email: string; phone?: string; pets?: string; notes?: string };
   createdAt: string; // ISO datetime
+};
+type TimeSlot = {
+  dateISO: string;
+  startMin: number;
+  endMin: number;
 };
 
 // =====================
@@ -330,20 +334,49 @@ function MultiDateCalendar({
 // =====================
 // BOOKING SIDEBAR (CUSTOMER)
 // =====================
-function BookingSidebar({ date, onSave }: { date: Date; onSave: (c: Choice) => void }) {
+function BookingSidebar({ 
+  date, 
+  onSave, 
+  bookedSlots 
+}: { 
+  date: Date; 
+  onSave: (c: Choice) => void;
+  bookedSlots: TimeSlot[];
+}) {
   const weekend = isWeekend(date);
   const [kind, setKind] = useState<Choice["kind"]>(weekend ? "weekend" : "weekday");
+  const dateISO = iso(date);
 
-  const slots = useMemo(() => {
+  // Build all possible slots, then filter out booked ones
+  const allSlots = useMemo(() => {
     if (kind === "weekday") return buildOneHourSlots(WEEKDAY_WINDOW.startMin, WEEKDAY_WINDOW.endMin);
     if (kind === "weekend") return buildOneHourSlots(WEEKEND_WINDOW.startMin, WEEKEND_WINDOW.endMin);
     return [] as { startLabel: string; endLabel: string; startMin: number; endMin: number }[]; // pet sitting: no time selection
   }, [kind]);
 
+  // Filter out slots that overlap with existing bookings
+  const availableSlots = useMemo(() => {
+    if (kind === "pet") return allSlots;
+    
+    return allSlots.filter((slot) => {
+      // Check if this slot overlaps with any booked slot
+      const hasConflict = bookedSlots.some(
+        (booked) =>
+          booked.dateISO === dateISO &&
+          booked.startMin < slot.endMin &&
+          booked.endMin > slot.startMin
+      );
+      return !hasConflict;
+    });
+  }, [allSlots, bookedSlots, dateISO, kind]);
+
   const [slotIndex, setSlotIndex] = useState(0);
   useEffect(() => setSlotIndex(0), [kind]);
 
   const price = kind === "weekday" ? WEEKDAY_WINDOW.price : kind === "weekend" ? WEEKEND_WINDOW.price : undefined;
+  
+  // Show warning if no slots available
+  const noSlotsAvailable = kind !== "pet" && availableSlots.length === 0;
 
   return (
     <div className="border border-neutral-200 rounded-2xl p-3 sm:p-4">
@@ -369,17 +402,23 @@ function BookingSidebar({ date, onSave }: { date: Date; onSave: (c: Choice) => v
       {kind !== "pet" ? (
         <div className="mb-4">
           <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1">Choose a 1‑hour time</label>
-          <select
-            className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-sm"
-            value={slotIndex}
-            onChange={(e) => setSlotIndex(parseInt(e.target.value, 10))}
-          >
-            {slots.map((s, i) => (
-              <option key={`${s.startMin}-${s.endMin}`} value={i}>
-                {s.startLabel} – {s.endLabel}
-              </option>
-            ))}
-          </select>
+          {noSlotsAvailable ? (
+            <div className="w-full rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-600">
+              All time slots are booked for this date. Please select a different date or choose Pet Sitting.
+            </div>
+          ) : (
+            <select
+              className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-sm"
+              value={slotIndex}
+              onChange={(e) => setSlotIndex(parseInt(e.target.value, 10))}
+            >
+              {availableSlots.map((s, i) => (
+                <option key={`${s.startMin}-${s.endMin}`} value={i}>
+                  {s.startLabel} – {s.endLabel}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       ) : (
         <p className="text-xs sm:text-sm text-neutral-600 mb-4">No time needed — you'll arrange arrival directly with the client.</p>
@@ -392,10 +431,11 @@ function BookingSidebar({ date, onSave }: { date: Date; onSave: (c: Choice) => v
             if (kind === "pet") {
               onSave({ kind: "pet" });
             } else {
-              const s = slots[slotIndex];
+              const s = availableSlots[slotIndex];
               onSave({ kind, startMin: s.startMin, endMin: s.endMin, price });
             }
           }}
+          disabled={noSlotsAvailable}
         >
           Add to request
         </Button>
@@ -410,13 +450,13 @@ function BookingSidebar({ date, onSave }: { date: Date; onSave: (c: Choice) => v
 function EmployeePanel({
   activeDate,
   unavailableSet,
-  setUnavailableSet,
   bookings,
+  onToggleAvailability,
 }: {
   activeDate: Date | null;
   unavailableSet: Set<string>;
-  setUnavailableSet: (s: Set<string>) => void;
   bookings: Booking[];
+  onToggleAvailability: (dateISO: string, makeUnavailable: boolean) => Promise<void>;
 }) {
   const activeISO = activeDate ? iso(activeDate) : null;
   const dayBookings = useMemo(() => (activeISO ? bookings.filter((b) => b.dateISO === activeISO) : []), [bookings, activeISO]);
@@ -434,10 +474,7 @@ function EmployeePanel({
             <Button
               variant={isUnavailable ? "outline" : "danger"}
               onClick={() => {
-                const next = new Set(unavailableSet);
-                if (isUnavailable) next.delete(activeISO);
-                else next.add(activeISO);
-                setUnavailableSet(next);
+                onToggleAvailability(activeISO, !isUnavailable);
               }}
             >
               {isUnavailable ? "Make Available" : "Mark Unavailable"}
@@ -492,31 +529,154 @@ export default function App() {
   const [showEmployeePrompt, setShowEmployeePrompt] = useState(false);
   const [employeeCodeInput, setEmployeeCodeInput] = useState("");
   const [employeeAuthError, setEmployeeAuthError] = useState("");
+  
+  // Time slot tracking for conflict prevention
+  const [bookedTimeSlots, setBookedTimeSlots] = useState<TimeSlot[]>([]);
 
   // Optional custom QR target (persisted)
   const [customQrTarget, setCustomQrTarget] = useState<string>("");
 
-  // Load from localStorage
+  // Load data from Supabase on mount
   useEffect(() => {
+    loadDataFromSupabase();
+    // Keep QR target in localStorage (local setting)
     try {
-      const u = JSON.parse(localStorage.getItem(LS_UNAVAILABLE) || '[]');
-      if (Array.isArray(u)) setUnavailableSet(new Set(u));
-      const b = JSON.parse(localStorage.getItem(LS_BOOKINGS) || '[]');
-      if (Array.isArray(b)) setBookings(b);
       const qrt = localStorage.getItem(LS_QR_TARGET) || "";
       if (typeof qrt === 'string') setCustomQrTarget(qrt);
     } catch {}
   }, []);
-  // Persist to localStorage
-  useEffect(() => {
-    try { localStorage.setItem(LS_UNAVAILABLE, JSON.stringify(Array.from(unavailableSet))); } catch {}
-  }, [unavailableSet]);
-  useEffect(() => {
-    try { localStorage.setItem(LS_BOOKINGS, JSON.stringify(bookings)); } catch {}
-  }, [bookings]);
+
+  // Persist QR target to localStorage (local setting only)
   useEffect(() => {
     try { localStorage.setItem(LS_QR_TARGET, customQrTarget || ""); } catch {}
   }, [customQrTarget]);
+
+  // Subscribe to real-time changes from Supabase
+  useEffect(() => {
+    // Subscribe to bookings changes
+    const bookingsSubscription = supabase
+      .channel('bookings-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+        loadBookings();
+      })
+      .subscribe();
+
+    // Subscribe to unavailable_dates changes
+    const unavailableSubscription = supabase
+      .channel('unavailable-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unavailable_dates' }, () => {
+        loadUnavailableDates();
+      })
+      .subscribe();
+
+    // Subscribe to time_slot_bookings changes
+    const timeSlotsSubscription = supabase
+      .channel('timeslots-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'time_slot_bookings' }, () => {
+        loadTimeSlots();
+      })
+      .subscribe();
+
+    return () => {
+      bookingsSubscription.unsubscribe();
+      unavailableSubscription.unsubscribe();
+      timeSlotsSubscription.unsubscribe();
+    };
+  }, []);
+
+  // Load all data from Supabase
+  async function loadDataFromSupabase() {
+    await Promise.all([loadBookings(), loadUnavailableDates(), loadTimeSlots()]);
+  }
+
+  // Load bookings from Supabase
+  async function loadBookings() {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      if (error) {
+        console.error('Error loading bookings:', error);
+        return;
+      }
+
+      if (data) {
+        const mappedBookings: Booking[] = data.map((row) => ({
+          dateISO: row.date_iso,
+          choice: row.choice,
+          customer: row.customer,
+          createdAt: row.created_at,
+        }));
+        setBookings(mappedBookings);
+      }
+    } catch (err) {
+      console.error('Failed to load bookings:', err);
+    }
+  }
+
+  // Load unavailable dates from Supabase
+  async function loadUnavailableDates() {
+    try {
+      const { data, error } = await supabase
+        .from('unavailable_dates')
+        .select('date_iso');
+      
+      if (error) {
+        console.error('Error loading unavailable dates:', error);
+        return;
+      }
+
+      if (data) {
+        const dates = data.map((row) => row.date_iso);
+        setUnavailableSet(new Set(dates));
+      }
+    } catch (err) {
+      console.error('Failed to load unavailable dates:', err);
+    }
+  }
+
+  // Load time slot bookings from Supabase
+  async function loadTimeSlots() {
+    try {
+      const { data, error } = await supabase
+        .from('time_slot_bookings')
+        .select('date_iso, start_min, end_min');
+      
+      if (error) {
+        console.error('Error loading time slots:', error);
+        return;
+      }
+
+      if (data) {
+        const slots: TimeSlot[] = data.map((row) => ({
+          dateISO: row.date_iso,
+          startMin: row.start_min,
+          endMin: row.end_min,
+        }));
+        setBookedTimeSlots(slots);
+      }
+    } catch (err) {
+      console.error('Failed to load time slots:', err);
+    }
+  }
+
+  // Check if a time slot overlaps with any existing bookings
+  // Two time ranges overlap if: (start1 < end2) AND (end1 > start2)
+  function checkTimeSlotConflict(dateISO: string, startMin: number, endMin: number): boolean {
+    return bookedTimeSlots.some(
+      (slot) =>
+        slot.dateISO === dateISO &&
+        slot.startMin < endMin &&
+        slot.endMin > startMin
+    );
+  }
+
+  // Get all booked time slots for a specific date
+  function getBookedSlotsForDate(dateISO: string): TimeSlot[] {
+    return bookedTimeSlots.filter((slot) => slot.dateISO === dateISO);
+  }
 
   // Submit contact form
   const [submitted, setSubmitted] = useState(false);
@@ -528,24 +688,123 @@ export default function App() {
     notes: "",
   });
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // STEP 1: Check for time slot conflicts BEFORE submitting
+    const today = startOfDay(new Date());
+    const conflictingDates: string[] = [];
+    
+    for (const date of selectedDates) {
+      const dateISO = iso(date);
+      const choice = perDateChoices[dateISO] || { kind: 'pet' };
+      const isSameDay = isSameDate(date, today);
+      
+      // Same-day bookings: check if entire day is already booked
+      if (isSameDay) {
+        const dayHasBookings = bookedTimeSlots.some((slot) => slot.dateISO === dateISO);
+        if (dayHasBookings) {
+          conflictingDates.push(`${dateISO} (same-day, already booked)`);
+        }
+      } else if (choice.kind !== 'pet' && choice.startMin !== undefined && choice.endMin !== undefined) {
+        // Future dates with time slots: check for overlap
+        const hasConflict = checkTimeSlotConflict(dateISO, choice.startMin, choice.endMin);
+        if (hasConflict) {
+          conflictingDates.push(`${dateISO} (${minutesToLabel(choice.startMin)} - ${minutesToLabel(choice.endMin)})`);
+        }
+      }
+    }
+    
+    if (conflictingDates.length > 0) {
+      alert(
+        `Sorry, the following time slots are no longer available:\n\n${conflictingDates.join('\n')}\n\nPlease refresh the page and select different times.`
+      );
+      return;
+    }
+
     setSubmitted(true);
 
-    // Save bookings locally (one entry per selected date)
+    // STEP 2: Save bookings to Supabase (one entry per selected date)
     const createdAt = new Date().toISOString();
-    const newBookings: Booking[] = selectedDates.map((d) => ({
-      dateISO: iso(d),
+    const newBookings = selectedDates.map((d) => ({
+      date_iso: iso(d),
       choice: perDateChoices[iso(d)] || { kind: 'pet' },
       customer: { ...form },
-      createdAt,
+      created_at: createdAt,
     }));
-    setBookings((prev) => [...prev, ...newBookings]);
 
-    // Mark those dates as unavailable for customers
-    const next = new Set(unavailableSet);
-    selectedDates.forEach((d) => next.add(iso(d)));
-    setUnavailableSet(next);
+    try {
+      // Insert bookings and get their IDs
+      const { data: insertedBookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .insert(newBookings)
+        .select('id, date_iso, choice');
+
+      if (bookingsError) {
+        console.error('Error saving bookings:', bookingsError);
+        alert('Failed to save booking. Please try again.');
+        setSubmitted(false);
+        return;
+      }
+
+      // STEP 3: Insert time slot bookings for conflict prevention
+      if (insertedBookings && insertedBookings.length > 0) {
+        const timeSlotEntries = insertedBookings
+          .filter((booking) => {
+            const choice = booking.choice;
+            // Only create time slot entries for bookings with specific times
+            return choice.kind !== 'pet' && choice.startMin !== undefined && choice.endMin !== undefined;
+          })
+          .map((booking) => ({
+            date_iso: booking.date_iso,
+            start_min: booking.choice.startMin,
+            end_min: booking.choice.endMin,
+            booking_id: booking.id,
+          }));
+
+        if (timeSlotEntries.length > 0) {
+          const { error: timeSlotsError } = await supabase
+            .from('time_slot_bookings')
+            .insert(timeSlotEntries);
+
+          if (timeSlotsError) {
+            console.error('Error saving time slots:', timeSlotsError);
+            // Check if it's a unique constraint violation (double-booking prevented at DB level)
+            if (timeSlotsError.code === '23505') {
+              alert('Sorry, one of those time slots was just booked by someone else. Please refresh and try again.');
+              setSubmitted(false);
+              await loadDataFromSupabase();
+              return;
+            }
+          }
+        }
+      }
+
+      // STEP 4: Mark dates as unavailable (for same-day bookings or employee-marked dates)
+      const today = startOfDay(new Date());
+      const sameDayBookings = selectedDates
+        .filter((d) => isSameDate(d, today))
+        .map((d) => ({
+          date_iso: iso(d),
+        }));
+
+      if (sameDayBookings.length > 0) {
+        const { error: unavailableError } = await supabase
+          .from('unavailable_dates')
+          .upsert(sameDayBookings, { onConflict: 'date_iso' });
+
+        if (unavailableError) {
+          console.error('Error marking dates unavailable:', unavailableError);
+        }
+      }
+
+      // Refresh data to update UI
+      await loadDataFromSupabase();
+    } catch (err) {
+      console.error('Failed to submit booking:', err);
+      alert('Failed to save booking. Please try again.');
+      setSubmitted(false);
+    }
   };
 
   const reset = () => {
@@ -555,6 +814,42 @@ export default function App() {
     setActiveDate(null);
     setForm({ name: "", email: "", phone: "", pets: "", notes: "" });
     setStep('dates');
+  };
+
+  // Toggle availability (for employee mode)
+  const handleToggleAvailability = async (dateISO: string, makeUnavailable: boolean) => {
+    try {
+      if (makeUnavailable) {
+        // Add to unavailable_dates
+        const { error } = await supabase
+          .from('unavailable_dates')
+          .upsert([{ date_iso: dateISO }], { onConflict: 'date_iso' });
+
+        if (error) {
+          console.error('Error marking date unavailable:', error);
+          alert('Failed to mark date unavailable. Please try again.');
+          return;
+        }
+      } else {
+        // Remove from unavailable_dates
+        const { error } = await supabase
+          .from('unavailable_dates')
+          .delete()
+          .eq('date_iso', dateISO);
+
+        if (error) {
+          console.error('Error making date available:', error);
+          alert('Failed to make date available. Please try again.');
+          return;
+        }
+      }
+
+      // Refresh data to update UI
+      await loadUnavailableDates();
+    } catch (err) {
+      console.error('Failed to toggle availability:', err);
+      alert('An error occurred. Please try again.');
+    }
   };
 
   // Mailto builder
@@ -723,6 +1018,7 @@ export default function App() {
                 {activeDate ? (
                   <BookingSidebar
                     date={activeDate}
+                    bookedSlots={getBookedSlotsForDate(iso(activeDate))}
                     onSave={(choice) => {
                       const key = iso(activeDate);
                       setPerDateChoices({ ...perDateChoices, [key]: choice });
@@ -839,8 +1135,8 @@ export default function App() {
               <EmployeePanel
                 activeDate={activeDate}
                 unavailableSet={unavailableSet}
-                setUnavailableSet={setUnavailableSet}
                 bookings={bookings}
+                onToggleAvailability={handleToggleAvailability}
               />
             </div>
           </CardContent>
