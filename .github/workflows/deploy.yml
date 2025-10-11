@@ -1,10 +1,11 @@
 name: Deploy to GitHub Pages
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+# Disabled - using manual deployment instead
+# on:
+#   push:
+#     branches: [ master ]
+#   pull_request:
+#     branches: [ master ]
 
 jobs:
   build-and-deploy:
