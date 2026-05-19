@@ -1,32 +1,208 @@
-# Logs
-logs
-*.log
+# ============================================================
+# Cell & Gene Therapy Tracking Platform — .gitignore
+# ============================================================
+
+# ----------------------------------------------------------
+# Python
+# ----------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env.bak
+.python-version
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# mypy / type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# ----------------------------------------------------------
+# Node / JavaScript / TypeScript
+# ----------------------------------------------------------
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Build outputs
+dist/
+dist-ssr/
+build/
+.next/
+out/
+.nuxt/
+.output/
+.svelte-kit/
+.vercel/
+
+# Vite
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Storybook
+storybook-static/
 
-# Environment variables
+# ----------------------------------------------------------
+# Environment / secrets — NEVER commit these
+# ----------------------------------------------------------
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-node_modules
+.env.staging
+.env.production
+.env.*.local
+*.env
+
+# ----------------------------------------------------------
+# GCP service account keys — extremely sensitive
+# ----------------------------------------------------------
+*-service-account.json
+*-sa-key.json
+service-account*.json
+*-credentials.json
+gcp-key*.json
+keyfile.json
+application_default_credentials.json
+
+# ----------------------------------------------------------
+# IDE / Editor
+# ----------------------------------------------------------
+# JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code — keep extensions.json, not personal settings
+.vscode/settings.json
+.vscode/launch.json
+!.vscode/extensions.json
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
+*.orig
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ----------------------------------------------------------
+# Docker
+# ----------------------------------------------------------
+docker-volumes/
+postgres-data/
+redis-data/
+
+# ----------------------------------------------------------
+# Terraform
+# ----------------------------------------------------------
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfplan
+*.tfplan.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# ----------------------------------------------------------
+# Google Cloud / GCP
+# ----------------------------------------------------------
+.gcloudignore
+cloudbuild_local.yaml
+
+# ----------------------------------------------------------
+# OS generated
+# ----------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ----------------------------------------------------------
+# Logs
+# ----------------------------------------------------------
+logs/
+*.log
+*.log.*
+
+# ----------------------------------------------------------
+# Miscellaneous
+# ----------------------------------------------------------
+*.bak
+*.tmp
+*.temp
+.sass-cache/
+*.pid
+*.seed
+*.pid.lock
+.grunt/
+.lock-wscript

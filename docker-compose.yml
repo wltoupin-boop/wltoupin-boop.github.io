@@ -1,0 +1,126 @@
+version: "3.9"
+
+# ============================================================
+# Cell & Gene Therapy Tracking Platform — Development Stack
+# ============================================================
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+
+  # ----------------------------------------------------------
+  # PostgreSQL 15 — Primary relational store
+  # ----------------------------------------------------------
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    networks:
+      - app-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-therapy_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-therapy_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-therapy_tracker}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-therapy_user} -d ${POSTGRES_DB:-therapy_tracker}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ----------------------------------------------------------
+  # Redis 7 — Cache and task-queue broker
+  # ----------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - app-network
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ----------------------------------------------------------
+  # Backend — FastAPI application
+  # ----------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    networks:
+      - app-network
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # These override anything in .env for local dev
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-therapy_user}:${POSTGRES_PASSWORD:-therapy_pass}@db:5432/${POSTGRES_DB:-therapy_tracker}
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Hot-reload in development: mount source code
+      - ./backend:/app:cached
+      - /app/__pycache__
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --log-level debug
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ----------------------------------------------------------
+  # Frontend — React/Vite development server
+  # ----------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+    restart: unless-stopped
+    networks:
+      - app-network
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_ENVIRONMENT: development
+      # Vite dev server listen on all interfaces inside container
+      HOST: 0.0.0.0
+      PORT: 3000
+    volumes:
+      - ./frontend:/app:cached
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    depends_on:
+      - backend
