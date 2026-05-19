@@ -19,7 +19,6 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useUpcomingMilestones, useTherapies } from '@/hooks/useTherapies';
 import { useMyWatchlist } from '@/hooks/useWatchlist';
 import { useAuth } from '@/hooks/useAuth';
-import { formatDate } from '@/lib/utils';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();

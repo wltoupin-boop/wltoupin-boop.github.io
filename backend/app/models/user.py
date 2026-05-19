@@ -257,6 +257,10 @@ class Notification(Base):
     action_url: Mapped[Optional[str]] = mapped_column(String(2048))
     metadata: Mapped[Optional[dict]] = mapped_column(JSON)
 
+    related_milestone_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
