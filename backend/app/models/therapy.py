@@ -357,5 +357,3 @@ class AIReviewFlag(Base):
 
     therapy: Mapped["Therapy"] = relationship("Therapy", back_populates="ai_review_flag_records")
 
-    # Import here to avoid circular at module level
-    from app.models.user import UserWatchlist  # noqa: F401

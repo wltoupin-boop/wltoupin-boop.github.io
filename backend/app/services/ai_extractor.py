@@ -10,7 +10,8 @@ import anthropic
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from app.config import settings
+from app.config import get_settings
+settings = get_settings()
 
 logger = structlog.get_logger(__name__)
 

@@ -33,14 +33,13 @@ class Settings(BaseSettings):
     secret_key: str = Field(..., min_length=32)
     debug: bool = False
     log_level: str = "info"
-    allowed_origins: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    # Comma-separated list of allowed CORS origins stored as a plain string,
+    # then split in the property below to avoid pydantic-settings JSON parsing issues.
+    cors_origins_raw: str = "http://localhost:3000,http://localhost:5173"
 
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def parse_origins(cls, v: str | List[str]) -> List[str]:
-        if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        return v
+    @property
+    def cors_origins(self) -> List[str]:
+        return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]
 
     # ------------------------------------------------------------------
     # Database
@@ -88,9 +87,14 @@ class Settings(BaseSettings):
         return None
 
     # ------------------------------------------------------------------
+    # Dev overrides
+    # ------------------------------------------------------------------
+    firebase_disabled: bool = False  # Set true in dev to bypass auth
+
+    # ------------------------------------------------------------------
     # Anthropic / Claude
     # ------------------------------------------------------------------
-    anthropic_api_key: str = Field(..., description="Anthropic API key")
+    anthropic_api_key: str = Field("", description="Anthropic API key")
     anthropic_model: str = "claude-opus-4-5"
     anthropic_max_tokens: int = 4096
 
@@ -105,9 +109,9 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Google Cloud
     # ------------------------------------------------------------------
-    gcs_bucket_name: str = Field(..., description="GCS bucket for documents")
+    gcs_bucket_name: str = Field("", description="GCS bucket for documents")
     google_cloud_project: str = ""
-    cloud_tasks_queue: str = Field(..., description="Cloud Tasks queue name")
+    cloud_tasks_queue: str = Field("", description="Cloud Tasks queue name")
     cloud_tasks_location: str = "us-central1"
 
     # ------------------------------------------------------------------

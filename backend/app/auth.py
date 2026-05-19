@@ -15,8 +15,6 @@ import logging
 from functools import lru_cache
 from typing import Optional
 
-import firebase_admin
-from firebase_admin import auth as firebase_auth, credentials
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -30,44 +28,40 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # ---------------------------------------------------------------------------
-# Firebase Admin SDK initialisation (once per process)
-# ---------------------------------------------------------------------------
-
-@lru_cache(maxsize=1)
-def _get_firebase_app() -> firebase_admin.App:
-    """Initialise (or return cached) Firebase Admin app."""
-    cred_dict = settings.get_firebase_credentials()
-    if cred_dict:
-        cred = credentials.Certificate(cred_dict)
-    else:
-        # Fall back to Application Default Credentials (Cloud Run, etc.)
-        cred = credentials.ApplicationDefault()
-    return firebase_admin.initialize_app(
-        cred,
-        {"projectId": settings.firebase_project_id},
-        name="cgt_platform",
-    )
-
-
-def _firebase_app() -> firebase_admin.App:
-    return _get_firebase_app()
-
-
-# ---------------------------------------------------------------------------
 # HTTP Bearer scheme — extracts the raw token from the Authorization header
 # ---------------------------------------------------------------------------
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
+# ---------------------------------------------------------------------------
+# Dev mode: bypass Firebase entirely
+# ---------------------------------------------------------------------------
+
+DEV_USER_CACHE: dict = {}
+
+async def _get_or_create_dev_user(db: AsyncSession) -> User:
+    """Return (or create) a dev admin user without Firebase verification."""
+    result = await db.execute(select(User).where(User.firebase_uid == "dev-user"))
+    user = result.scalar_one_or_none()
+    if not user:
+        user = User(
+            firebase_uid="dev-user",
+            email="dev@cellgenetracker.local",
+            display_name="Dev Admin",
+            role=UserRole.SUPER_ADMIN,
+        )
+        db.add(user)
+        await db.flush()
+    return user
+
 
 async def verify_firebase_token(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> dict:
-    """
-    Verify a Firebase ID token and return the decoded token claims.
+    """Verify a Firebase ID token. In dev mode (FIREBASE_DISABLED=true), skip verification."""
+    if settings.firebase_disabled:
+        return {"uid": "dev-user", "email": "dev@cellgenetracker.local"}
 
-    Raises HTTP 401 if the token is missing, expired, or invalid.
-    """
     if not credentials or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,38 +69,40 @@ async def verify_firebase_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = credentials.credentials
-    app = _firebase_app()
-
     try:
-        decoded = firebase_auth.verify_id_token(token, app=app, check_revoked=True)
-    except firebase_auth.RevokedIdTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has been revoked",
-            headers={"WWW-Authenticate": "Bearer"},
+        import firebase_admin
+        from firebase_admin import auth as firebase_auth, credentials as fb_creds
+
+        @lru_cache(maxsize=1)
+        def _get_firebase_app():
+            cred_dict = settings.get_firebase_credentials()
+            if cred_dict:
+                cred = fb_creds.Certificate(cred_dict)
+            else:
+                cred = fb_creds.ApplicationDefault()
+            return firebase_admin.initialize_app(
+                cred,
+                {"projectId": settings.firebase_project_id},
+                name="cgt_platform",
+            )
+
+        app = _get_firebase_app()
+        decoded = firebase_auth.verify_id_token(
+            credentials.credentials, app=app, check_revoked=True
         )
-    except firebase_auth.UserDisabledError:
+        return decoded
+    except ImportError:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="firebase-admin not installed",
         )
-    except firebase_auth.InvalidIdTokenError as exc:
-        logger.warning("Invalid Firebase token: %s", exc)
+    except Exception as exc:
+        logger.warning("Firebase token error: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except Exception as exc:
-        logger.error("Firebase token verification error: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not verify authentication token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return decoded
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +119,9 @@ async def get_current_user(
     If the user has authenticated for the first time, a VIEWER-role record is
     created automatically.
     """
+    if settings.firebase_disabled:
+        return await _get_or_create_dev_user(db)
+
     firebase_uid: str = token_data["uid"]
     email: str = token_data.get("email", "")
 

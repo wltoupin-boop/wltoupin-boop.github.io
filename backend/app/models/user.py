@@ -255,7 +255,7 @@ class Notification(Base):
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     action_url: Mapped[Optional[str]] = mapped_column(String(2048))
-    metadata: Mapped[Optional[dict]] = mapped_column(JSON)
+    extra_data: Mapped[Optional[dict]] = mapped_column(JSON)
 
     related_milestone_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), nullable=True

@@ -154,8 +154,9 @@ class WatchlistResponse(_OrmBase):
     added_at: datetime
     updated_at: datetime
 
-    # Nested therapy summary
-    therapy: Optional[Any] = None  # populated by join
+    therapy_name: Optional[str] = None
+    therapy_type: Optional[str] = None
+    therapy_disease_category: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

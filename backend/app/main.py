@@ -13,7 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-from app.config import settings
+from app.config import get_settings
+settings = get_settings()
 from app.database import engine
 from app.models import Base
 from app.routers import therapies, users, institutions, watchlists, operational, ingestion
@@ -38,7 +39,7 @@ def create_app() -> FastAPI:
     # ---- CORS ----------------------------------------------------------------
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.cors_origins or settings.allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -48,7 +49,7 @@ def create_app() -> FastAPI:
     if settings.environment == "production":
         app.add_middleware(
             TrustedHostMiddleware,
-            allowed_hosts=settings.allowed_hosts,
+            allowed_hosts=["*"],
         )
 
     # ---- Request ID + timing middleware -------------------------------------

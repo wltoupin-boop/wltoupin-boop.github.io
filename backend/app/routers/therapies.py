@@ -10,7 +10,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, noload
 
 from app.auth import get_current_user, require_admin
 from app.database import get_db
@@ -34,7 +34,6 @@ from app.schemas.therapy import (
     TherapyMilestoneResponse,
     TherapyResponse,
     TherapyUpdate,
-    UpcomingMilestoneResponse,
 )
 
 router = APIRouter(prefix="/therapies", tags=["therapies"])
@@ -66,13 +65,16 @@ def _apply_filters(stmt, params: dict):
 
 
 async def _get_therapy_or_404(
-    therapy_id: uuid.UUID, db: AsyncSession
+    therapy_id: uuid.UUID, db: AsyncSession, load_milestones: bool = False
 ) -> Therapy:
-    result = await db.execute(
-        select(Therapy).where(
-            and_(Therapy.id == therapy_id, Therapy.is_active.is_(True))
-        )
+    stmt = select(Therapy).where(
+        and_(Therapy.id == therapy_id, Therapy.is_active.is_(True))
     )
+    if load_milestones:
+        stmt = stmt.options(selectinload(Therapy.milestones))
+    else:
+        stmt = stmt.options(noload(Therapy.milestones))
+    result = await db.execute(stmt)
     therapy = result.scalar_one_or_none()
     if not therapy:
         raise HTTPException(status_code=404, detail="Therapy not found")
@@ -143,7 +145,7 @@ async def list_therapies(
     # Paginate
     offset = (page - 1) * page_size
     items_result = await db.execute(
-        base_stmt.offset(offset).limit(page_size)
+        base_stmt.options(noload(Therapy.milestones)).offset(offset).limit(page_size)
     )
     items = items_result.scalars().all()
 
@@ -217,7 +219,7 @@ async def get_therapy(
     db: AsyncSession = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ):
-    therapy = await _get_therapy_or_404(therapy_id, db)
+    therapy = await _get_therapy_or_404(therapy_id, db, load_milestones=True)
     return TherapyResponse.model_validate(therapy)
 
 
@@ -230,8 +232,7 @@ async def create_therapy(
     therapy = Therapy(**payload.model_dump(), created_by=current_user.id, updated_by=current_user.id)
     db.add(therapy)
     await db.commit()
-    await db.refresh(therapy)
-    return TherapyResponse.model_validate(therapy)
+    return await _get_therapy_or_404(therapy.id, db)
 
 
 @router.put("/{therapy_id}", response_model=TherapyResponse)
@@ -269,8 +270,7 @@ async def update_therapy(
         therapy.updated_by = current_user.id
 
     await db.commit()
-    await db.refresh(therapy)
-    return TherapyResponse.model_validate(therapy)
+    return await _get_therapy_or_404(therapy.id, db)
 
 
 @router.delete("/{therapy_id}", status_code=status.HTTP_204_NO_CONTENT)
